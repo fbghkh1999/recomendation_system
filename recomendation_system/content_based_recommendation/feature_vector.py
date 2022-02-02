@@ -1,15 +1,11 @@
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
+
 from sklearn.preprocessing import StandardScaler
 
 from preprocess.preprocess import get_anime, get_rating
 
 
-def get_anime_rating():
-    anime=get_anime()
-    rating = get_rating()
-    return pd.concat(anime,rating,join='right')
 
 def get_genres(df):
     genres = {}
@@ -51,15 +47,17 @@ def get_feature_genre(genres,x):
 def create_feature_vector():
     headers,genres=get_features()
     anime = get_anime()
-    cleanup_nums = {'type': {"Movie": 1, "TV": 2}}
-    df=pd.DataFrame(columns=headers)
-    anime.replace(cleanup_nums,inplace=True)
+    anime.replace('Unknown', np.NAN, inplace=True)
+    anime.dropna(inplace=True)
+    cleanup_nums = {'type': {"Movie": 1, "TV": 2,'Special':3,'Music':4,'ONA':5,'OVA':6}}
+    df=pd.DataFrame(columns=headers,index=anime['anime_id'])
+    anime.replace(cleanup_nums, inplace=True)
     df['type']=anime['type']
     df['members'] = anime['members']
     df['rating'] = anime['rating']
     df['episodes']=anime['episodes']
     num_cols = ['members', 'rating', 'episodes']
-    df.replace('Unknown',np.NAN,inplace=True)
+
     # apply standardization on numerical features
     for i in num_cols:
         scale = StandardScaler().fit(df[[i]])
@@ -68,4 +66,7 @@ def create_feature_vector():
     anime['genre']=anime.apply(lambda x:get_feature_genre(genres,x['genre']),axis=1)
     for i,j in enumerate(genres):
         df[j]=anime.apply(lambda x:x['genre'][i] if x['genre'] is not None else None,axis=1)
+    df.dropna(inplace=True)
     df.to_csv("feature_vector.csv")
+
+create_feature_vector()
